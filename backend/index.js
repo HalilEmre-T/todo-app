@@ -39,18 +39,28 @@ app.post('/api/todos', async (req, res) => {
 
 
 app.put('/api/todos/:id', async (req, res) => {
-  const { id } = req.params;
-  const updated = await prisma.todo.update({
-    where: { id: Number(id) },
-    data: { done: true },
-  });
-  res.json(updated);
+  try {
+    const { id } = req.params;
+    const updated = await prisma.todo.update({
+      where: { id: Number(id) },
+      data: { done: true },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('PUT /api/todos/:id hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
 });
 
 app.delete('/api/todos/:id', async (req, res) => {
-  const { id } = req.params;
-  await prisma.todo.delete({ where: { id: Number(id) } });
-  res.sendStatus(204);
+  try {
+    const { id } = req.params;
+    await prisma.todo.delete({ where: { id: Number(id) } });
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('DELETE /api/todos/:id hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
