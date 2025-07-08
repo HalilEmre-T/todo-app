@@ -30,6 +30,7 @@ function App() {
     });
 
     const yeni = await res.json();
+    console,log('Yeni görev backend`den', yeni);
     setTodos([yeni, ...todos]);
     setInput('');
   };
