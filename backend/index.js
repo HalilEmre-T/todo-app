@@ -19,10 +19,24 @@ app.get('/api/todos', async (req, res) => {
 });
 
 app.post('/api/todos', async (req, res) => {
-  const { text } = req.body;
-  const newTodo = await prisma.todo.create({ data: { text, done: false } });
-  res.json(newTodo);
+  try {
+    const { text } = req.body;
+
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    const newTodo = await prisma.todo.create({
+      data: { text, done: false },
+    });
+
+    res.status(201).json(newTodo);
+  } catch (err) {
+    console.error('POST /api/todos hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
 });
+
 
 app.put('/api/todos/:id', async (req, res) => {
   const { id } = req.params;
