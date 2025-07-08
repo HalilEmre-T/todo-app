@@ -3,6 +3,10 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
+app.get('/', (req, res) => {
+  res.send('API çalışıyor 🚀');
+}); 
+
 const app = express();
 const prisma = new PrismaClient();
 
