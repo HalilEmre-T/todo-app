@@ -10,7 +10,13 @@ function App() {
   useEffect(() => {
     fetch(`${API_URL}/api/todos`)
       .then(res => res.json())
-      .then(data => setTodos(data));
+      .then(data => {
+        console.log('Backendden gelen todos :', data);
+        setTodos(data);
+      })
+      .catch(err =>{
+        console.error('Görevler yüklenirken hata  :', err);
+      });
   }, []);
 
   // Yeni görev ekle
