@@ -3,16 +3,16 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
-app.get('/', (req, res) => {
-  res.send('API çalışıyor 🚀');
-}); 
-
 const app = express();
 const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('API çalışıyor 🚀');
+
+}); 
 app.get('/api/todos', async (req, res) => {
   const todos = await prisma.todo.findMany();
   res.json(todos);
