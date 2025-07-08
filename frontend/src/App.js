@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
+const API_URL = 'https://todo-app-9gw9.onrender.com';
+
 function App() {
   const [todos, setTodos] = useState([]);
   const [input, setInput] = useState('');
 
-  // Backend'den verileri çek
+  // Görevleri çek
   useEffect(() => {
-    fetch('http://localhost:5000/api/todos')
+    fetch(`${API_URL}/api/todos`)
       .then(res => res.json())
       .then(data => setTodos(data));
   }, []);
 
-  // Yeni todo ekle
+  // Yeni görev ekle
   const addTodo = async () => {
     if (!input.trim()) return;
 
-    const res = await fetch('http://localhost:5000/api/todos', {
+    const res = await fetch(`${API_URL}/api/todos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: input }),
@@ -26,9 +28,9 @@ function App() {
     setInput('');
   };
 
-  // Tamamla
+  // Görevi tamamla (done: true)
   const markDone = async (id) => {
-    await fetch(`http://localhost:5000/api/todos/${id}`, {
+    await fetch(`${API_URL}/api/todos/${id}`, {
       method: 'PUT',
     });
 
@@ -37,9 +39,9 @@ function App() {
     ));
   };
 
-  // Sil
+  // Görevi sil
   const deleteTodo = async (id) => {
-    await fetch(`http://localhost:5000/api/todos/${id}`, {
+    await fetch(`${API_URL}/api/todos/${id}`, {
       method: 'DELETE',
     });
 

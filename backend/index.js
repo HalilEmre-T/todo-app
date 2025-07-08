@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
 
 const app = express();
 const prisma = new PrismaClient();
@@ -8,35 +9,33 @@ const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
 
-// Tüm görevleri getir
 app.get('/api/todos', async (req, res) => {
-  const todos = await prisma.todo.findMany({ orderBy: { createdAt: 'desc' } });
+  const todos = await prisma.todo.findMany();
   res.json(todos);
 });
 
-// Yeni görev ekle
 app.post('/api/todos', async (req, res) => {
   const { text } = req.body;
-  const newTodo = await prisma.todo.create({ data: { text } });
+  const newTodo = await prisma.todo.create({ data: { text, done: false } });
   res.json(newTodo);
 });
 
-// Görevi tamamla (done: true)
 app.put('/api/todos/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const updatedTodo = await prisma.todo.update({
-    where: { id },
+  const { id } = req.params;
+  const updated = await prisma.todo.update({
+    where: { id: Number(id) },
     data: { done: true },
   });
-  res.json(updatedTodo);
+  res.json(updated);
 });
 
-// Görevi sil
 app.delete('/api/todos/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  await prisma.todo.delete({ where: { id } });
-  res.json({ message: 'Deleted' });
+  const { id } = req.params;
+  await prisma.todo.delete({ where: { id: Number(id) } });
+  res.sendStatus(204);
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`Backend server running on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor`);
+});
