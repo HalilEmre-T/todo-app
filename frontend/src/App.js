@@ -29,24 +29,48 @@ function App() {
   };
 
   // Görevi tamamla (done: true)
-  const markDone = async (id) => {
-    await fetch(`${API_URL}/api/todos/${id}`, {
+const markDone = async (id) => {
+  try {
+    const res = await fetch(`${API_URL}/api/todos/${id}`, {
       method: 'PUT',
     });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('PUT hata:', errorText);
+      alert('Görevi tamamlarken hata oluştu.');
+      return;
+    }
 
     setTodos(todos.map(todo =>
       todo.id === id ? { ...todo, done: true } : todo
     ));
-  };
+  } catch (error) {
+    console.error('PUT isteği sırasında hata:', error);
+    alert('Sunucuya bağlanırken hata oluştu.');
+  }
+};
 
   // Görevi sil
-  const deleteTodo = async (id) => {
-    await fetch(`${API_URL}/api/todos/${id}`, {
+const deleteTodo = async (id) => {
+  try {
+    const res = await fetch(`${API_URL}/api/todos/${id}`, {
       method: 'DELETE',
     });
 
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('DELETE hata:', errorText);
+      alert('Görevi silerken hata oluştu.');
+      return;
+    }
+
     setTodos(todos.filter(todo => todo.id !== id));
-  };
+  } catch (error) {
+    console.error('DELETE isteği sırasında hata:', error);
+    alert('Sunucuya bağlanırken hata oluştu.');
+  }
+};
 
   return (
     <div style={{ maxWidth: 600, margin: '30px auto', fontFamily: 'Arial' }}>
