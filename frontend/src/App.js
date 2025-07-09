@@ -76,6 +76,7 @@ function App() {
 
   const logout = () => {
     setToken('');
+    setTodos([]);
   };
 
   const hideWarning = () => setShowWarning(false);
@@ -325,3 +326,4 @@ function App() {
 }
 
 export default App;
+
