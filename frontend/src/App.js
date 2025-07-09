@@ -24,8 +24,7 @@ function App() {
       const data = await res.json();
       setTodos(Array.isArray(data) ? data : []);
     } catch (err) {
-      // Alert kaldırıldı, istersen log da ekleyebilirsin:
-      // console.error('Todo listesi alınamadı:', err.message);
+      
     }
     setLoadingTodos(false);
   }, [token]);
