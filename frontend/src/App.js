@@ -6,18 +6,26 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [input, setInput] = useState('');
 
+  // Token'ı localStorage'dan alıyoruz
+  const token = localStorage.getItem('token');
+
   // Görevleri çek
   useEffect(() => {
-    fetch(`${API_URL}/api/todos`)
+    fetch(`${API_URL}/api/todos`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,  // burada token ekleniyor
+        'Content-Type': 'application/json',
+      }
+    })
       .then(res => res.json())
       .then(data => {
         console.log('Backendden gelen todos :', data);
         setTodos(data);
       })
-      .catch(err =>{
+      .catch(err => {
         console.error('Görevler yüklenirken hata  :', err);
       });
-  }, []);
+  }, [token]);  // token değişirse yenile
 
   // Yeni görev ekle
   const addTodo = async () => {
@@ -25,7 +33,10 @@ function App() {
 
     const res = await fetch(`${API_URL}/api/todos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,  // token ekleniyor
+      },
       body: JSON.stringify({ text: input }),
     });
 
@@ -36,48 +47,50 @@ function App() {
   };
 
   // Görevi tamamla (done: true)
-const markDone = async (id) => {
-  try {
-    const res = await fetch(`${API_URL}/api/todos/${id}`, {
-      method: 'PUT',
-    });
+  const markDone = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/todos/${id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },  // token ekleniyor
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('PUT hata:', errorText);
-      alert('Görevi tamamlarken hata oluştu.');
-      return;
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('PUT hata:', errorText);
+        alert('Görevi tamamlarken hata oluştu.');
+        return;
+      }
+
+      setTodos(todos.map(todo =>
+        todo.id === id ? { ...todo, done: true } : todo
+      ));
+    } catch (error) {
+      console.error('PUT isteği sırasında hata:', error);
+      alert('Sunucuya bağlanırken hata oluştu.');
     }
-
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, done: true } : todo
-    ));
-  } catch (error) {
-    console.error('PUT isteği sırasında hata:', error);
-    alert('Sunucuya bağlanırken hata oluştu.');
-  }
-};
+  };
 
   // Görevi sil
-const deleteTodo = async (id) => {
-  try {
-    const res = await fetch(`${API_URL}/api/todos/${id}`, {
-      method: 'DELETE',
-    });
+  const deleteTodo = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/todos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },  // token ekleniyor
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('DELETE hata:', errorText);
-      alert('Görevi silerken hata oluştu.');
-      return;
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('DELETE hata:', errorText);
+        alert('Görevi silerken hata oluştu.');
+        return;
+      }
+
+      setTodos(todos.filter(todo => todo.id !== id));
+    } catch (error) {
+      console.error('DELETE isteği sırasında hata:', error);
+      alert('Sunucuya bağlanırken hata oluştu.');
     }
-
-    setTodos(todos.filter(todo => todo.id !== id));
-  } catch (error) {
-    console.error('DELETE isteği sırasında hata:', error);
-    alert('Sunucuya bağlanırken hata oluştu.');
-  }
-};
+  };
 
   return (
     <div style={{ maxWidth: 600, margin: '30px auto', fontFamily: 'Arial' }}>
