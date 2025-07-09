@@ -10,39 +10,36 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [isLoggedIn, setIsLoggedIn] = useState(!!token);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showAuthForm, setShowAuthForm] = useState(false);
   const [loadingTodos, setLoadingTodos] = useState(false);
 
-  // Token değişirse localStorage'a yaz ve todo'ları getir
   useEffect(() => {
-    if (!token) {
+    if (token) {
+      localStorage.setItem('token', token);
+      setIsLoggedIn(true);
+      fetchTodos();
+    } else {
+      localStorage.removeItem('token');
       setIsLoggedIn(false);
       setTodos([]);
-      localStorage.removeItem('token');
-      return;
     }
-
-    setIsLoggedIn(true);
-    localStorage.setItem('token', token);
-
-    async function fetchTodos() {
-      setLoadingTodos(true);
-      try {
-        const res = await fetch(`${API_URL}/api/todos`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Todo listesi alınamadı');
-        const data = await res.json();
-        setTodos(Array.isArray(data) ? data : []);
-      } catch (err) {
-        alert(err.message);
-      }
-      setLoadingTodos(false);
-    }
-
-    fetchTodos();
   }, [token]);
 
-  // Kayıt veya Giriş işlemi
+  const fetchTodos = async () => {
+    setLoadingTodos(true);
+    try {
+      const res = await fetch(`${API_URL}/api/todos`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Todo listesi alınamadı');
+      const data = await res.json();
+      setTodos(Array.isArray(data) ? data : []);
+    } catch (err) {
+      alert(err.message);
+    }
+    setLoadingTodos(false);
+  };
+
   const handleAuth = async () => {
     if (!email || !password) {
       alert('E-posta ve şifre gerekli');
@@ -66,6 +63,7 @@ function App() {
         setToken(data.token);
         setEmail('');
         setPassword('');
+        setShowAuthForm(false);
       } else {
         alert('Kayıt başarılı, lütfen giriş yapınız.');
         setIsRegisterMode(false);
@@ -75,12 +73,10 @@ function App() {
     }
   };
 
-  // Logout
   const logout = () => {
     setToken('');
   };
 
-  // Yeni görev ekle
   const addTodo = async () => {
     if (!input.trim()) return;
     try {
@@ -104,7 +100,6 @@ function App() {
     }
   };
 
-  // Görevi tamamla
   const markDone = async (id) => {
     try {
       const res = await fetch(`${API_URL}/api/todos/${id}`, {
@@ -118,7 +113,6 @@ function App() {
     }
   };
 
-  // Görevi sil
   const deleteTodo = async (id) => {
     try {
       const res = await fetch(`${API_URL}/api/todos/${id}`, {
@@ -132,84 +126,105 @@ function App() {
     }
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div style={{ maxWidth: 400, margin: '30px auto', fontFamily: 'Arial' }}>
-        <h2>{isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}</h2>
-        <input
-          type="email"
-          placeholder="E-posta"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          style={{ width: '100%', padding: 8, marginBottom: 10 }}
-        />
-        <input
-          type="password"
-          placeholder="Şifre"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          style={{ width: '100%', padding: 8, marginBottom: 10 }}
-        />
-        <button onClick={handleAuth} style={{ width: '100%', padding: 10, marginBottom: 10 }}>
-          {isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}
-        </button>
-        <button onClick={() => setIsRegisterMode(!isRegisterMode)} style={{ width: '100%', padding: 10 }}>
-          {isRegisterMode ? 'Zaten üye misiniz? Giriş yapın' : 'Hesabınız yok mu? Kayıt olun'}
-        </button>
-      </div>
-    );
-  }
-
-  // Giriş yapılmışsa todo listesi göster
   return (
-    <div style={{ maxWidth: 600, margin: '30px auto', fontFamily: 'Arial' }}>
-      <h2>📝 Yapılacaklar Listesi</h2>
-      <button onClick={logout} style={{ marginBottom: 20, padding: 10 }}>
-        Çıkış Yap
-      </button>
-      <div style={{ display: 'flex', marginBottom: 20 }}>
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Yapılacak yaz..."
-          style={{ flex: 1, padding: 10 }}
-        />
-        <button onClick={addTodo} style={{ marginLeft: 10, padding: '10px 20px' }}>
-          Ekle
-        </button>
+    <div style={{ fontFamily: 'Arial' }}>
+      {/* NAVBAR */}
+      <div style={{
+        backgroundColor: '#333',
+        color: '#fff',
+        padding: '10px 20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h2 style={{ margin: 0 }}>📝 TodoApp</h2>
+        <div>
+          {isLoggedIn ? (
+            <button onClick={logout} style={{ padding: '8px 16px' }}>Çıkış Yap</button>
+          ) : (
+            <button onClick={() => setShowAuthForm(!showAuthForm)} style={{ padding: '8px 16px' }}>
+              Giriş / Kayıt
+            </button>
+          )}
+        </div>
       </div>
-      {loadingTodos ? (
-        <p>Yükleniyor...</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {todos.map(todo => (
-            <li
-              key={todo.id}
-              style={{
-                padding: 12,
-                marginBottom: 10,
-                backgroundColor: '#f8f8f8',
-                borderRadius: 6,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                textDecoration: todo.done ? 'line-through' : 'none',
-                color: todo.done ? '#999' : '#000',
-              }}
-            >
-              <span>{todo.text}</span>
-              <div>
-                {!todo.done && (
-                  <button onClick={() => markDone(todo.id)} style={{ marginRight: 8 }}>
-                    Tamamla
-                  </button>
-                )}
-                <button onClick={() => deleteTodo(todo.id)}>Sil</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+
+      {/* Giriş/Kayıt Formu */}
+      {!isLoggedIn && showAuthForm && (
+        <div style={{ maxWidth: 400, margin: '30px auto' }}>
+          <h2>{isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}</h2>
+          <input
+            type="email"
+            placeholder="E-posta"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            style={{ width: '100%', padding: 8, marginBottom: 10 }}
+          />
+          <input
+            type="password"
+            placeholder="Şifre"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            style={{ width: '100%', padding: 8, marginBottom: 10 }}
+          />
+          <button onClick={handleAuth} style={{ width: '100%', padding: 10, marginBottom: 10 }}>
+            {isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}
+          </button>
+          <button onClick={() => setIsRegisterMode(!isRegisterMode)} style={{ width: '100%', padding: 10 }}>
+            {isRegisterMode ? 'Zaten üye misiniz? Giriş yapın' : 'Hesabınız yok mu? Kayıt olun'}
+          </button>
+        </div>
+      )}
+
+      {/* To-Do Listesi */}
+      {isLoggedIn && (
+        <div style={{ maxWidth: 600, margin: '30px auto' }}>
+          <h2>Görevler</h2>
+          <div style={{ display: 'flex', marginBottom: 20 }}>
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Yapılacak yaz..."
+              style={{ flex: 1, padding: 10 }}
+            />
+            <button onClick={addTodo} style={{ marginLeft: 10, padding: '10px 20px' }}>
+              Ekle
+            </button>
+          </div>
+          {loadingTodos ? (
+            <p>Yükleniyor...</p>
+          ) : (
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {todos.map(todo => (
+                <li
+                  key={todo.id}
+                  style={{
+                    padding: 12,
+                    marginBottom: 10,
+                    backgroundColor: '#f8f8f8',
+                    borderRadius: 6,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    textDecoration: todo.done ? 'line-through' : 'none',
+                    color: todo.done ? '#999' : '#000',
+                  }}
+                >
+                  <span>{todo.text}</span>
+                  <div>
+                    {!todo.done && (
+                      <button onClick={() => markDone(todo.id)} style={{ marginRight: 8 }}>
+                        Tamamla
+                      </button>
+                    )}
+                    <button onClick={() => deleteTodo(todo.id)}>Sil</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
