@@ -18,7 +18,7 @@ function App() {
     setLoadingTodos(true);
     try {
       const res = await fetch(`${API_URL}/api/todos`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error('Todo listesi alınamadı');
       const data = await res.json();
@@ -33,12 +33,11 @@ function App() {
     if (token) {
       localStorage.setItem('token', token);
       setIsLoggedIn(true);
-      fetchTodos();
     } else {
       localStorage.removeItem('token');
       setIsLoggedIn(false);
-      setTodos([]);
     }
+    fetchTodos();
   }, [token, fetchTodos]);
 
   const handleAuth = async () => {
@@ -186,62 +185,61 @@ function App() {
         </div>
       )}
 
-      {/* To-Do Listesi */}
-      {isLoggedIn && (
-        <div style={{ maxWidth: 600, margin: '30px auto' }}>
-          <h2>Görevler</h2>
-          <div style={{ display: 'flex', marginBottom: 20 }}>
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Yapılacak yaz..."
-              style={{ flex: 1, padding: 10 }}
-              disabled={!isLoggedIn}
-              onFocus={hideWarning}
-            />
-            <button 
-              onClick={addTodo} 
-              style={{ marginLeft: 10, padding: '10px 20px' }} 
-              disabled={!isLoggedIn}
-            >
-              Ekle
-            </button>
-          </div>
-          {loadingTodos ? (
-            <p>Yükleniyor...</p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {todos.map(todo => (
-                <li
-                  key={todo.id}
-                  style={{
-                    padding: 12,
-                    marginBottom: 10,
-                    backgroundColor: '#f8f8f8',
-                    borderRadius: 6,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    textDecoration: todo.done ? 'line-through' : 'none',
-                    color: todo.done ? '#999' : '#000',
-                  }}
-                >
-                  <span>{todo.text}</span>
-                  <div>
-                    {!todo.done && (
-                      <button onClick={() => markDone(todo.id)} style={{ marginRight: 8 }}>
-                        Tamamla
-                      </button>
-                    )}
-                    <button onClick={() => deleteTodo(todo.id)}>Sil</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+      {/* To-Do Listesi ve Ekleme */}
+      <div style={{ maxWidth: 600, margin: '30px auto' }}>
+        <h2>Görevler</h2>
+        <div style={{ display: 'flex', marginBottom: 20 }}>
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Yapılacak yaz..."
+            style={{ flex: 1, padding: 10 }}
+          />
+          <button 
+            onClick={addTodo} 
+            style={{ marginLeft: 10, padding: '10px 20px' }}
+          >
+            Ekle
+          </button>
         </div>
-      )}
+        {loadingTodos ? (
+          <p>Yükleniyor...</p>
+        ) : todos.length === 0 ? (
+          <p style={{ color: '#555' }}>{isLoggedIn ? 'Görev yok' : 'Giriş yaparak görevlerinizi görebilirsiniz'}</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {todos.map(todo => (
+              <li
+                key={todo.id}
+                style={{
+                  padding: 12,
+                  marginBottom: 10,
+                  backgroundColor: '#f8f8f8',
+                  borderRadius: 6,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  textDecoration: todo.done ? 'line-through' : 'none',
+                  color: todo.done ? '#999' : '#000',
+                }}
+              >
+                <span>{todo.text}</span>
+                <div>
+                  {!todo.done && isLoggedIn && (
+                    <button onClick={() => markDone(todo.id)} style={{ marginRight: 8 }}>
+                      Tamamla
+                    </button>
+                  )}
+                  {isLoggedIn && (
+                    <button onClick={() => deleteTodo(todo.id)}>Sil</button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Kayıt Olmadan Todo Ekleme Uyarısı */}
       {showWarning && (
