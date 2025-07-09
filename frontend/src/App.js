@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const API_URL = 'https://todo-app-9gw9.onrender.com';
 
@@ -13,19 +13,7 @@ function App() {
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [loadingTodos, setLoadingTodos] = useState(false);
 
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-      setIsLoggedIn(true);
-      fetchTodos();
-    } else {
-      localStorage.removeItem('token');
-      setIsLoggedIn(false);
-      setTodos([]);
-    }
-  }, [token]);
-
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     setLoadingTodos(true);
     try {
       const res = await fetch(`${API_URL}/api/todos`, {
@@ -38,7 +26,19 @@ function App() {
       alert(err.message);
     }
     setLoadingTodos(false);
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+      setIsLoggedIn(true);
+      fetchTodos();
+    } else {
+      localStorage.removeItem('token');
+      setIsLoggedIn(false);
+      setTodos([]);
+    }
+  }, [token, fetchTodos]);
 
   const handleAuth = async () => {
     if (!email || !password) {
