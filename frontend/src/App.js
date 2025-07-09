@@ -12,6 +12,7 @@ function App() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [loadingTodos, setLoadingTodos] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   const fetchTodos = useCallback(async () => {
     setLoadingTodos(true);
@@ -77,8 +78,17 @@ function App() {
     setToken('');
   };
 
+  const hideWarning = () => setShowWarning(false);
+
   const addTodo = async () => {
     if (!input.trim()) return;
+
+    if (!isLoggedIn) {
+      setShowWarning(true);
+      setTimeout(() => setShowWarning(false), 3000);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/todos`, {
         method: 'POST',
@@ -127,7 +137,7 @@ function App() {
   };
 
   return (
-    <div style={{ fontFamily: 'Arial' }}>
+    <div style={{ fontFamily: 'Arial', position: 'relative' }}>
       {/* NAVBAR */}
       <div style={{
         backgroundColor: '#333',
@@ -187,8 +197,14 @@ function App() {
               onChange={e => setInput(e.target.value)}
               placeholder="Yapılacak yaz..."
               style={{ flex: 1, padding: 10 }}
+              disabled={!isLoggedIn}
+              onFocus={hideWarning}
             />
-            <button onClick={addTodo} style={{ marginLeft: 10, padding: '10px 20px' }}>
+            <button 
+              onClick={addTodo} 
+              style={{ marginLeft: 10, padding: '10px 20px' }} 
+              disabled={!isLoggedIn}
+            >
               Ekle
             </button>
           </div>
@@ -224,6 +240,36 @@ function App() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* Kayıt Olmadan Todo Ekleme Uyarısı */}
+      {showWarning && (
+        <div
+          onClick={hideWarning}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            padding: 20,
+            borderRadius: 8,
+            boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+            maxWidth: 300,
+            textAlign: 'center',
+            fontWeight: 'bold',
+            fontSize: 18,
+          }}>
+            Lütfen kayıt olunuz
+          </div>
         </div>
       )}
     </div>
