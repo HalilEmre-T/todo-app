@@ -3,6 +3,9 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
+console.log('JWT_SECRET:', process.env.JWT_SECRET); // Env kontrol
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+
 const app = express();
 const prisma = new PrismaClient();
 
@@ -170,11 +173,17 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Şifre yanlış' });
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: '1d' }
-    );
+    let token;
+    try {
+      token = jwt.sign(
+        { userId: user.id, role: user.role }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '1d' }
+      );
+    } catch (e) {
+      console.error('JWT sign hatası:', e);
+      return res.status(500).json({ error: 'Token oluşturulamadı' });
+    }
 
     res.json({ token });
   } catch (err) {
