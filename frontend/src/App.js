@@ -11,6 +11,10 @@ function App() {
 
   // Görevleri çek
   useEffect(() => {
+    if (!token) {
+      setTodos([]);
+      return;
+    }
     fetch(`${API_URL}/api/todos`, {
       headers: {
         'Authorization': `Bearer ${token}`,  // burada token ekleniyor
@@ -20,7 +24,12 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log('Backendden gelen todos :', data);
-        setTodos(data);
+        if (Array.isArray(data)) {
+          setTodos(data);
+        } else {
+          console.error('Beklenmeyen veri yapısı:', data);
+          setTodos([]);  // Hata durumunda boş liste göster
+        }
       })
       .catch(err => {
         console.error('Görevler yüklenirken hata  :', err);
@@ -30,6 +39,10 @@ function App() {
   // Yeni görev ekle
   const addTodo = async () => {
     if (!input.trim()) return;
+    if (!token) {
+      alert('Lütfen giriş yapınız.');
+      return;  // Burada eklemelisin ki işlem devam etmesin
+    }
 
     const res = await fetch(`${API_URL}/api/todos`, {
       method: 'POST',
