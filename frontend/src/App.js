@@ -46,6 +46,12 @@ function App() {
       alert('E-posta ve şifre gerekli');
       return;
     }
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isValidEmail) {
+    alert('Geçerli bir e-posta adresi giriniz.');
+    return;
+  }
+    
     try {
       const url = isRegisterMode ? `${API_URL}/api/register` : `${API_URL}/api/login`;
       const res = await fetch(url, {
