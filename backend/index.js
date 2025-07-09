@@ -1,233 +1,189 @@
-import React, { useState, useEffect } from 'react';
+const express = require('express');
+const cors = require('cors');
+const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
 
-const API_URL = 'https://todo-app-9gw9.onrender.com';
+const app = express();
+const prisma = new PrismaClient();
 
-function App() {
-  const [todos, setTodos] = useState([]);
-  const [input, setInput] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [isLoggedIn, setIsLoggedIn] = useState(!!token);
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [showAuthForm, setShowAuthForm] = useState(false);
-  const [loadingTodos, setLoadingTodos] = useState(false);
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-      setIsLoggedIn(true);
-      fetchTodos();
-    } else {
-      localStorage.removeItem('token');
-      setIsLoggedIn(false);
-      setTodos([]);
-    }
-  }, [token]);
+app.use(cors({
+  origin: 'https://benim-web-sitem.netlify.app',  // frontend domain’i buraya
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
-  const fetchTodos = async () => {
-    setLoadingTodos(true);
-    try {
-      const res = await fetch(`${API_URL}/api/todos`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Todo listesi alınamadı');
-      const data = await res.json();
-      setTodos(Array.isArray(data) ? data : []);
-    } catch (err) {
-      alert(err.message);
-    }
-    setLoadingTodos(false);
-  };
+app.use(express.json());
 
-  const handleAuth = async () => {
-    if (!email || !password) {
-      alert('E-posta ve şifre gerekli');
-      return;
-    }
-    try {
-      const url = isRegisterMode ? `${API_URL}/api/register` : `${API_URL}/api/login`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
+// JWT doğrulama middleware
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
 
-      if (!res.ok) {
-        alert(data.error || 'Bir hata oluştu');
-        return;
-      }
+  if (!token) return res.status(401).json({ error: 'Token gerekli' });
 
-      if (!isRegisterMode) {
-        setToken(data.token);
-        setEmail('');
-        setPassword('');
-        setShowAuthForm(false);
-      } else {
-        alert('Kayıt başarılı, lütfen giriş yapınız.');
-        setIsRegisterMode(false);
-      }
-    } catch (err) {
-      alert('İstek başarısız');
-    }
-  };
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token geçersiz' });
 
-  const logout = () => {
-    setToken('');
-  };
-
-  const addTodo = async () => {
-    if (!input.trim()) return;
-    try {
-      const res = await fetch(`${API_URL}/api/todos`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text: input }),
-      });
-      const yeni = await res.json();
-      if (!res.ok) {
-        alert(yeni.error || 'Görev eklenemedi');
-        return;
-      }
-      setTodos([yeni, ...todos]);
-      setInput('');
-    } catch {
-      alert('Sunucuya bağlanırken hata oluştu');
-    }
-  };
-
-  const markDone = async (id) => {
-    try {
-      const res = await fetch(`${API_URL}/api/todos/${id}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Görev güncellenemedi');
-      setTodos(todos.map(todo => (todo.id === id ? { ...todo, done: true } : todo)));
-    } catch {
-      alert('Görev tamamlanamadı');
-    }
-  };
-
-  const deleteTodo = async (id) => {
-    try {
-      const res = await fetch(`${API_URL}/api/todos/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Görev silinemedi');
-      setTodos(todos.filter(todo => todo.id !== id));
-    } catch {
-      alert('Görev silinemedi');
-    }
-  };
-
-  return (
-    <div style={{ fontFamily: 'Arial' }}>
-      {/* NAVBAR */}
-      <div style={{
-        backgroundColor: '#333',
-        color: '#fff',
-        padding: '10px 20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h2 style={{ margin: 0 }}>📝 TodoApp</h2>
-        <div>
-          {isLoggedIn ? (
-            <button onClick={logout} style={{ padding: '8px 16px' }}>Çıkış Yap</button>
-          ) : (
-            <button onClick={() => setShowAuthForm(!showAuthForm)} style={{ padding: '8px 16px' }}>
-              Giriş / Kayıt
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Giriş/Kayıt Formu */}
-      {!isLoggedIn && showAuthForm && (
-        <div style={{ maxWidth: 400, margin: '30px auto' }}>
-          <h2>{isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}</h2>
-          <input
-            type="email"
-            placeholder="E-posta"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: 8, marginBottom: 10 }}
-          />
-          <input
-            type="password"
-            placeholder="Şifre"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={{ width: '100%', padding: 8, marginBottom: 10 }}
-          />
-          <button onClick={handleAuth} style={{ width: '100%', padding: 10, marginBottom: 10 }}>
-            {isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}
-          </button>
-          <button onClick={() => setIsRegisterMode(!isRegisterMode)} style={{ width: '100%', padding: 10 }}>
-            {isRegisterMode ? 'Zaten üye misiniz? Giriş yapın' : 'Hesabınız yok mu? Kayıt olun'}
-          </button>
-        </div>
-      )}
-
-      {/* To-Do Listesi */}
-      {isLoggedIn && (
-        <div style={{ maxWidth: 600, margin: '30px auto' }}>
-          <h2>Görevler</h2>
-          <div style={{ display: 'flex', marginBottom: 20 }}>
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Yapılacak yaz..."
-              style={{ flex: 1, padding: 10 }}
-            />
-            <button onClick={addTodo} style={{ marginLeft: 10, padding: '10px 20px' }}>
-              Ekle
-            </button>
-          </div>
-          {loadingTodos ? (
-            <p>Yükleniyor...</p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {todos.map(todo => (
-                <li
-                  key={todo.id}
-                  style={{
-                    padding: 12,
-                    marginBottom: 10,
-                    backgroundColor: '#f8f8f8',
-                    borderRadius: 6,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    textDecoration: todo.done ? 'line-through' : 'none',
-                    color: todo.done ? '#999' : '#000',
-                  }}
-                >
-                  <span>{todo.text}</span>
-                  <div>
-                    {!todo.done && (
-                      <button onClick={() => markDone(todo.id)} style={{ marginRight: 8 }}>
-                        Tamamla
-                      </button>
-                    )}
-                    <button onClick={() => deleteTodo(todo.id)}>Sil</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
+    req.user = user; // userId ve role burada olacak
+    next();
+  });
 }
 
-export default App;
+app.get('/', (req, res) => {
+  res.send('API çalışıyor 🚀');
+});
+
+// Korumalı Todo Listeleme
+app.get('/api/todos', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      const todos = await prisma.todo.findMany();
+      return res.json(todos);
+    }
+    const todos = await prisma.todo.findMany({
+      where: { userId: req.user.userId },
+    });
+    res.json(todos);
+  } catch (err) {
+    console.error('GET /api/todos hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Korumalı Todo Oluşturma
+app.post('/api/todos', authenticateToken, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    const newTodo = await prisma.todo.create({
+      data: {
+        text,
+        done: false,
+        userId: req.user.userId,
+      },
+    });
+
+    res.status(201).json(newTodo);
+  } catch (err) {
+    console.error('POST /api/todos hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Korumalı Todo Güncelleme
+app.put('/api/todos/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const todo = await prisma.todo.findUnique({ where: { id: Number(id) } });
+
+    if (!todo) return res.status(404).json({ error: 'Todo bulunamadı' });
+
+    if (req.user.role !== 'admin' && todo.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Yetkisiz işlem' });
+    }
+
+    const updated = await prisma.todo.update({
+      where: { id: Number(id) },
+      data: { done: true },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('PUT /api/todos/:id hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Korumalı Todo Silme
+app.delete('/api/todos/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const todo = await prisma.todo.findUnique({ where: { id: Number(id) } });
+
+    if (!todo) return res.status(404).json({ error: 'Todo bulunamadı' });
+
+    if (req.user.role !== 'admin' && todo.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Yetkisiz işlem' });
+    }
+
+    await prisma.todo.delete({ where: { id: Number(id) } });
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('DELETE /api/todos/:id hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Kullanıcı Kayıt (role default: "user" olacak)
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email ve şifre gerekli' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Bu e-posta zaten kayıtlı.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: 'user',  // default role
+      },
+    });
+
+    res.status(201).json({ message: 'Kayıt başarılı' });
+  } catch (err) {
+    console.error('POST /api/register hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Kullanıcı Giriş (token içine role da ekleniyor)
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email ve şifre gerekli' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ error: 'E-posta bulunamadı' });
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ error: 'Şifre yanlış' });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d' }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error('POST /api/login hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor`);
+});
