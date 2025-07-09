@@ -6,6 +6,9 @@ require('dotenv').config();
 const app = express();
 const prisma = new PrismaClient();
 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 app.use(cors({
   origin: 'https://benim-web-sitem.netlify.app',  // frontend domain’i buraya
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -14,25 +17,56 @@ app.use(cors({
 
 app.use(express.json());
 
+// JWT doğrulama middleware
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+
+  if (!token) return res.status(401).json({ error: 'Token gerekli' });
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token geçersiz' });
+
+    req.user = user; // userId ve role burada olacak
+    next();
+  });
+}
+
 app.get('/', (req, res) => {
   res.send('API çalışıyor 🚀');
-
-}); 
-app.get('/api/todos', async (req, res) => {
-  const todos = await prisma.todo.findMany();
-  res.json(todos);
 });
 
-app.post('/api/todos', async (req, res) => {
+// Korumalı Todo Listeleme
+app.get('/api/todos', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      const todos = await prisma.todo.findMany();
+      return res.json(todos);
+    }
+    const todos = await prisma.todo.findMany({
+      where: { userId: req.user.userId },
+    });
+    res.json(todos);
+  } catch (err) {
+    console.error('GET /api/todos hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Korumalı Todo Oluşturma
+app.post('/api/todos', authenticateToken, async (req, res) => {
   try {
     const { text } = req.body;
-
     if (!text || text.trim() === '') {
       return res.status(400).json({ error: 'Text is required' });
     }
 
     const newTodo = await prisma.todo.create({
-      data: { text, done: false },
+      data: {
+        text,
+        done: false,
+        userId: req.user.userId,
+      },
     });
 
     res.status(201).json(newTodo);
@@ -42,14 +76,23 @@ app.post('/api/todos', async (req, res) => {
   }
 });
 
-
-app.put('/api/todos/:id', async (req, res) => {
+// Korumalı Todo Güncelleme
+app.put('/api/todos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const todo = await prisma.todo.findUnique({ where: { id: Number(id) } });
+
+    if (!todo) return res.status(404).json({ error: 'Todo bulunamadı' });
+
+    if (req.user.role !== 'admin' && todo.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Yetkisiz işlem' });
+    }
+
     const updated = await prisma.todo.update({
       where: { id: Number(id) },
       data: { done: true },
     });
+
     res.json(updated);
   } catch (err) {
     console.error('PUT /api/todos/:id hatası:', err);
@@ -57,15 +100,69 @@ app.put('/api/todos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/todos/:id', async (req, res) => {
+// Korumalı Todo Silme
+app.delete('/api/todos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const todo = await prisma.todo.findUnique({ where: { id: Number(id) } });
+
+    if (!todo) return res.status(404).json({ error: 'Todo bulunamadı' });
+
+    if (req.user.role !== 'admin' && todo.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Yetkisiz işlem' });
+    }
+
     await prisma.todo.delete({ where: { id: Number(id) } });
     res.sendStatus(204);
   } catch (err) {
     console.error('DELETE /api/todos/:id hatası:', err);
     res.status(500).json({ error: 'Sunucu hatası' });
   }
+});
+
+// Kullanıcı Kayıt (role default: "user" olacak)
+app.post('/api/register', async (req, res) => {
+  const { email, password } = req.body;
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    return res.status(400).json({ error: 'Bu e-posta zaten kayıtlı.' });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      role: 'user',  // default role
+    },
+  });
+
+  res.status(201).json({ message: 'Kayıt başarılı' });
+});
+
+// Kullanıcı Giriş (token içine role da ekleniyor)
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return res.status(400).json({ error: 'E-posta bulunamadı' });
+  }
+
+  const isPasswordCorrect = await bcrypt.compare(password, user.password);
+  if (!isPasswordCorrect) {
+    return res.status(400).json({ error: 'Şifre yanlış' });
+  }
+
+  const token = jwt.sign(
+    { userId: user.id, role: user.role }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '1d' }
+  );
+
+  res.json({ token });
 });
 
 const PORT = process.env.PORT || 5000;
