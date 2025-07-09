@@ -12,34 +12,35 @@ function App() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [loadingTodos, setLoadingTodos] = useState(false);
 
-  // Token değişirse localStorage'a yaz
+  // Token değişirse localStorage'a yaz ve todo'ları getir
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-      setIsLoggedIn(true);
-      fetchTodos();
-    } else {
-      localStorage.removeItem('token');
+    if (!token) {
       setIsLoggedIn(false);
       setTodos([]);
+      localStorage.removeItem('token');
+      return;
     }
-  }, [token]);
 
-  // Todo'ları getir
-  const fetchTodos = async () => {
-    setLoadingTodos(true);
-    try {
-      const res = await fetch(`${API_URL}/api/todos`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Todo listesi alınamadı');
-      const data = await res.json();
-      setTodos(Array.isArray(data) ? data : []);
-    } catch (err) {
-      alert(err.message);
+    setIsLoggedIn(true);
+    localStorage.setItem('token', token);
+
+    async function fetchTodos() {
+      setLoadingTodos(true);
+      try {
+        const res = await fetch(`${API_URL}/api/todos`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Todo listesi alınamadı');
+        const data = await res.json();
+        setTodos(Array.isArray(data) ? data : []);
+      } catch (err) {
+        alert(err.message);
+      }
+      setLoadingTodos(false);
     }
-    setLoadingTodos(false);
-  };
+
+    fetchTodos();
+  }, [token]);
 
   // Kayıt veya Giriş işlemi
   const handleAuth = async () => {
