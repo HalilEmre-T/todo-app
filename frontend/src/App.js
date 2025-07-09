@@ -151,37 +151,86 @@ function App() {
           {isLoggedIn ? (
             <button onClick={logout} style={{ padding: '8px 16px' }}>Çıkış Yap</button>
           ) : (
-            <button onClick={() => setShowAuthForm(!showAuthForm)} style={{ padding: '8px 16px' }}>
+            <button onClick={() => setShowAuthForm(true)} style={{ padding: '8px 16px' }}>
               Giriş / Kayıt
             </button>
           )}
         </div>
       </div>
 
-      {/* Giriş/Kayıt Formu */}
-      {!isLoggedIn && showAuthForm && (
-        <div style={{ maxWidth: 400, margin: '30px auto' }}>
-          <h2>{isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}</h2>
-          <input
-            type="email"
-            placeholder="E-posta"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: 8, marginBottom: 10 }}
-          />
-          <input
-            type="password"
-            placeholder="Şifre"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={{ width: '100%', padding: 8, marginBottom: 10 }}
-          />
-          <button onClick={handleAuth} style={{ width: '100%', padding: 10, marginBottom: 10 }}>
-            {isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}
-          </button>
-          <button onClick={() => setIsRegisterMode(!isRegisterMode)} style={{ width: '100%', padding: 10 }}>
-            {isRegisterMode ? 'Zaten üye misiniz? Giriş yapın' : 'Hesabınız yok mu? Kayıt olun'}
-          </button>
+      {/* Giriş/Kayıt Modal Formu */}
+      {showAuthForm && (
+        <div
+          onClick={() => setShowAuthForm(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 20,
+              padding: 30,
+              width: '90%',
+              maxWidth: 400,
+              boxShadow: '0 8px 16px rgba(0,0,0,0.25)',
+              textAlign: 'center',
+            }}
+          >
+            <h2>{isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}</h2>
+            <input
+              type="email"
+              placeholder="E-posta"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={{ width: '100%', padding: 10, marginBottom: 15, borderRadius: 10, border: '1px solid #ccc' }}
+            />
+            <input
+              type="password"
+              placeholder="Şifre"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              style={{ width: '100%', padding: 10, marginBottom: 15, borderRadius: 10, border: '1px solid #ccc' }}
+            />
+            <button
+              onClick={handleAuth}
+              style={{
+                width: '100%',
+                padding: 12,
+                borderRadius: 15,
+                backgroundColor: '#007bff',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 16,
+                marginBottom: 10,
+              }}
+            >
+              {isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap'}
+            </button>
+            <button
+              onClick={() => setIsRegisterMode(!isRegisterMode)}
+              style={{
+                width: '100%',
+                padding: 12,
+                borderRadius: 15,
+                backgroundColor: '#6c757d',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 14,
+              }}
+            >
+              {isRegisterMode ? 'Zaten üye misiniz? Giriş yapın' : 'Hesabınız yok mu? Kayıt olun'}
+            </button>
+          </div>
         </div>
       )}
 
