@@ -122,47 +122,65 @@ app.delete('/api/todos/:id', authenticateToken, async (req, res) => {
 
 // Kullanıcı Kayıt (role default: "user" olacak)
 app.post('/api/register', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    return res.status(400).json({ error: 'Bu e-posta zaten kayıtlı.' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email ve şifre gerekli' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Bu e-posta zaten kayıtlı.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: 'user',  // default role
+      },
+    });
+
+    res.status(201).json({ message: 'Kayıt başarılı' });
+  } catch (err) {
+    console.error('POST /api/register hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
   }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const user = await prisma.user.create({
-    data: {
-      email,
-      password: hashedPassword,
-      role: 'user',  // default role
-    },
-  });
-
-  res.status(201).json({ message: 'Kayıt başarılı' });
 });
 
 // Kullanıcı Giriş (token içine role da ekleniyor)
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return res.status(400).json({ error: 'E-posta bulunamadı' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email ve şifre gerekli' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ error: 'E-posta bulunamadı' });
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ error: 'Şifre yanlış' });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d' }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error('POST /api/login hatası:', err);
+    res.status(500).json({ error: 'Sunucu hatası' });
   }
-
-  const isPasswordCorrect = await bcrypt.compare(password, user.password);
-  if (!isPasswordCorrect) {
-    return res.status(400).json({ error: 'Şifre yanlış' });
-  }
-
-  const token = jwt.sign(
-    { userId: user.id, role: user.role }, 
-    process.env.JWT_SECRET, 
-    { expiresIn: '1d' }
-  );
-
-  res.json({ token });
 });
 
 const PORT = process.env.PORT || 5000;
