@@ -9,8 +9,9 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// 🔹 CORS ayarı (hem localhost hem Netlify için izin)
 app.use(cors({
-  origin: 'https://benim-web-sitem.netlify.app',  // frontend domain’i buraya
+  origin: ['http://localhost:3000', 'https://benim-web-sitem.netlify.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -25,16 +26,27 @@ function authenticateToken(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Token gerekli' });
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token geçersiz' });
+    if (err) {
+      console.error("JWT verify hatası:", err.message);
+      return res.status(403).json({ error: 'Token geçersiz' });
+    }
 
     req.user = user; // userId ve role burada olacak
     next();
   });
 }
 
+// Test endpoint
 app.get('/', (req, res) => {
   res.send('API çalışıyor 🚀');
 });
+
+// 🔹 Debug için env kontrolü (Render loglarına düşsün)
+if (!process.env.JWT_SECRET) {
+  console.error("⚠️ JWT_SECRET tanımlı değil! Render Environment Variables kısmını kontrol et.");
+} else {
+  console.log("✅ JWT_SECRET yüklendi.");
+}
 
 // Korumalı Todo Listeleme
 app.get('/api/todos', authenticateToken, async (req, res) => {
@@ -120,7 +132,7 @@ app.delete('/api/todos/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Kullanıcı Kayıt (role default: "user" olacak)
+// Kullanıcı Kayıt
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -140,7 +152,7 @@ app.post('/api/register', async (req, res) => {
       data: {
         email,
         password: hashedPassword,
-        role: 'user',  // default role
+        role: 'user',
       },
     });
 
@@ -151,7 +163,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Kullanıcı Giriş (token içine role da ekleniyor)
+// Kullanıcı Giriş
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -171,8 +183,8 @@ app.post('/api/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, role: user.role }, 
-      process.env.JWT_SECRET, 
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
